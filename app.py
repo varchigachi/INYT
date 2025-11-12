@@ -25,13 +25,16 @@ def index():
     return render_template("index.html")
 
 
-# ---------- METADATA ----------
+# ---------- UNIVERSAL METADATA ----------
 @app.route("/metadata", methods=["POST"])
 def metadata():
     url = request.form.get("url")
+    platform = request.form.get("platform", "youtube")
+
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
+    # Set default extractor options
     ydl_opts = {
         "quiet": True,
         "skip_download": True,
@@ -39,40 +42,28 @@ def metadata():
         "no_warnings": True,
         "ffmpeg_location": ffmpeg_path,
     }
-
     if os.path.exists("cookies.txt"):
         ydl_opts["cookiefile"] = "cookies.txt"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            formats = []
-            for f in info.get("formats", []):
-                if f.get("filesize") and f.get("ext") in ["mp4", "m4a", "webm"]:
-                    formats.append({
-                        "id": f["format_id"],
-                        "ext": f["ext"],
-                        "res": f.get("height", "audio"),
-                        "abr": f.get("abr"),
-                        "filesize": round((f["filesize"] or 0) / 1_000_000, 1)
-                    })
             return jsonify({
-                "id": info.get("id"),
                 "title": info.get("title"),
                 "thumbnail": info.get("thumbnail"),
                 "duration": info.get("duration_string", ""),
-                "formats": formats[:10]
+                "uploader": info.get("uploader", ""),
             })
     except Exception as e:
         print("Metadata error:", e)
-        return jsonify({"error": f"⚠️ Could not fetch metadata: {str(e)}"}), 500
+        return jsonify({"error": f"⚠️ Could not fetch info: {str(e)}"}), 500
 
 
-# ---------- DOWNLOAD ----------
+# ---------- UNIVERSAL DOWNLOAD ----------
 @app.route("/download", methods=["POST"])
 def download():
     url = request.form.get("url")
-    fmt_id = request.form.get("format_id")
+    platform = request.form.get("platform", "youtube")
     mode = request.form.get("mode", "video")
 
     if not url:
@@ -83,7 +74,6 @@ def download():
     progress_file = os.path.join(DOWNLOAD_DIR, f"{file_id}_progress.json")
 
     def progress_hook(d):
-        """Update progress percentage safely."""
         try:
             if d["status"] == "downloading":
                 percent = d.get("_percent_str", "0%").strip()
@@ -108,7 +98,7 @@ def download():
     if os.path.exists("cookies.txt"):
         ydl_opts["cookiefile"] = "cookies.txt"
 
-    if mode == "audio":
+    if mode == "audio" and platform == "youtube":
         ydl_opts.update({
             "format": "bestaudio[ext=m4a]/bestaudio/best",
             "postprocessors": [{
@@ -118,7 +108,7 @@ def download():
             }],
         })
     else:
-        ydl_opts["format"] = fmt_id or "bestvideo+bestaudio/best"
+        ydl_opts["format"] = "bestvideo+bestaudio/best"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -126,11 +116,11 @@ def download():
             ydl.process_info(info)
             file_path = ydl.prepare_filename(info)
 
-            if mode == "audio":
-                base, _ = os.path.splitext(file_path)
-                mp3_path = base + ".mp3"
-                if os.path.exists(mp3_path):
-                    file_path = mp3_path
+        if mode == "audio" and platform == "youtube":
+            base, _ = os.path.splitext(file_path)
+            mp3_path = base + ".mp3"
+            if os.path.exists(mp3_path):
+                file_path = mp3_path
 
         if os.path.exists(progress_file):
             os.remove(progress_file)
