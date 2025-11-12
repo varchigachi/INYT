@@ -62,10 +62,11 @@ def download():
     output_template = os.path.join(DOWNLOAD_DIR, f"{file_id}_%(title)s.%(ext)s")
 
     ydl_opts = {
-        "outtmpl": output_template,
-        "quiet": True,
-        "merge_output_format": "mp4",
-        "ffmpeg_location": ffmpeg_path,
+    "quiet": True,
+    "skip_download": True,
+    "extractor_args": {"youtube": ["player_client=android"]},  # ✅ Android client
+    "no_warnings": True,
+    "ffmpeg_location": ffmpeg_path,
     }
 
     if mode == "audio":
