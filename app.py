@@ -8,6 +8,13 @@ import imageio_ffmpeg
 
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
+# Write the cookies from environment to a temp file if present
+cookies_env = os.environ.get("YOUTUBE_COOKIES")
+if cookies_env:
+    with open("cookies.txt", "w", encoding="utf-8") as f:
+        f.write(cookies_env)
+
+
 app = Flask(__name__)
 DOWNLOAD_DIR = "/tmp"  
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
