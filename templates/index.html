@@ -1,205 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Smart Downloader</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body {
-    font-family: 'Poppins', sans-serif;
-    background: radial-gradient(circle at top right, #0f172a, #020617 70%);
-  }
-  .glass {
-    backdrop-filter: blur(20px);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-  }
-  select option { background: #0f172a; color: white; }
-  .progress { transition: width 0.3s ease; }
-  .glow {
-    animation: glowPulse 2s ease-in-out infinite alternate;
-  }
-  @keyframes glowPulse {
-    from { filter: drop-shadow(0 0 6px #00f2ff); }
-    to { filter: drop-shadow(0 0 20px #00f2ff); }
-  }
-  @keyframes slideUpFade {
-  0% { transform: translateY(20px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-.show-toast {
-  display: block !important;
-  animation: slideUpFade 0.6s ease-out forwards;
-}
-.hide-toast {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #bar {
+      animation: pulseGlow 2s infinite alternate ease-in-out;
+    }
+    @keyframes pulseGlow {
+      from {
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.8),
+                    0 0 24px rgba(0, 150, 255, 0.4);
+      }
+      to {
+        box-shadow: 0 0 24px rgba(0, 255, 255, 0.9),
+                    0 0 36px rgba(0, 150, 255, 0.6);
+      }
+    }
+  </style>
 </head>
-<body class="text-white flex flex-col justify-center items-center min-h-screen">
+<body class="bg-[#0f172a] min-h-screen flex flex-col items-center justify-center text-white font-sans px-5">
 
-  <!-- HEADER -->
-  <h1 class="text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-cyan-400 to-pink-500 bg-clip-text text-transparent mb-4">
-    Smart Video & Audio Downloader
-  </h1>
-  <p class="text-gray-400 mb-10 text-center text-lg">
-    🎬 Download from YouTube • Shorts • Instagram in full HD or MP3
-  </p>
+  <h1 class="text-3xl font-bold mb-5 text-cyan-400">🎥 Universal Downloader</h1>
 
-  <!-- MAIN CARD -->
-  <div class="glass p-8 rounded-2xl w-11/12 max-w-lg">
-    <form id="form" class="space-y-5">
-      <!-- URL Input -->
-      <input id="url" name="url" placeholder="Paste YouTube / Instagram link..."
-        class="w-full px-4 py-3 rounded-lg bg-black/50 text-white border border-white/20 focus:ring-4 focus:ring-cyan-400 outline-none" />
+  <form class="flex flex-col items-center gap-3 w-full max-w-md">
+    <input type="text" name="url" placeholder="Paste YouTube or Instagram URL"
+      class="w-full p-3 rounded-xl bg-neutral-800 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
+    <button type="submit"
+      class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
+      🔍 Fetch Details
+    </button>
+  </form>
 
-      <!-- Format dropdown -->
-      <select id="format" name="format_id"
-        class="w-full px-4 py-3 rounded-lg bg-black text-gray-200 border border-white/20 focus:ring-4 focus:ring-blue-500 outline-none">
-        <option>Select format...</option>
-      </select>
+  <div id="msg" class="mt-6 text-center text-gray-300"></div>
 
-      <!-- Buttons -->
-      <div class="flex space-x-3">
-        <button type="submit" id="videoBtn"
-          class="w-1/2 py-3 bg-gradient-to-r from-blue-600 via-cyan-400 to-pink-500 rounded-xl font-semibold hover:scale-[1.02] transition-all duration-300">
-          🎥 Download Video
-        </button>
-        <button type="button" id="audioBtn"
-          class="w-1/2 py-3 bg-gradient-to-r from-pink-600 via-purple-400 to-red-500 rounded-xl font-semibold hover:scale-[1.02] transition-all duration-300">
-          🎧 Download Audio
-        </button>
-      </div>
-    </form>
-
-    <!-- Preview -->
-    <div id="preview" class="hidden mt-6 text-center">
-      <img id="thumb" class="mx-auto rounded-lg w-60 h-34 object-cover shadow-lg" />
-      <h3 id="title" class="mt-3 text-lg font-semibold"></h3>
-      <p id="platform" class="text-gray-400 text-sm"></p>
-    </div>
-
-    <!-- Progress Bar -->
-    <div id="progressBox" class="hidden mt-6">
-      <div class="w-full bg-white/10 h-3 rounded-full">
-        <div id="bar" class="bg-gradient-to-r from-cyan-400 to-pink-500 h-3 rounded-full progress" style="width:0%"></div>
-      </div>
-      <p id="pct" class="text-center text-sm text-gray-400 mt-2">0%</p>
-    </div>
-
-    <!-- Message -->
-    <div id="msg" class="mt-4 text-center text-lg font-medium"></div>
+  <!-- Progress Bar -->
+  <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden max-w-md">
+    <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl shadow-[0_0_12px_rgba(0,200,255,0.8)] transition-all duration-500 ease-out"></div>
+    <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="mt-12 text-gray-500 text-sm text-center">
-    Built with ❤️ by <span class="text-cyan-400">Srujan</span>
-  </footer>
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl text-lg font-semibold shadow-2xl"></div>
 
-  <!-- SCRIPTS -->
   <script>
-const form = document.querySelector("form");
-const msg = document.getElementById("msg");
-const bar = document.getElementById("bar");
-const pct = document.getElementById("pct");
-let currentFileId = null;
+    const form = document.querySelector("form");
+    const msg = document.getElementById("msg");
+    const bar = document.getElementById("bar");
+    const pct = document.getElementById("pct");
+    const toast = document.getElementById("toast");
+    let currentFileId = null;
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const url = form.querySelector("input").value.trim();
-  if (!url) return;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const url = form.querySelector("input").value.trim();
+      if (!url) return;
 
-  msg.innerHTML = "⏳ Fetching video info...";
-  bar.style.width = "10%";
+      msg.innerHTML = "⏳ Fetching video info...";
+      bar.style.width = "10%";
 
-  const formData = new FormData();
-  formData.append("url", url);
+      const formData = new FormData();
+      formData.append("url", url);
 
-  try {
-    const res = await fetch("/metadata", { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
+      try {
+        const res = await fetch("/metadata", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
 
-    msg.innerHTML = `
-      <div class="mt-3 text-white">
-        <img src="${data.thumbnail}" class="rounded-xl mb-3 w-64">
-        <h2 class="text-xl font-semibold">${data.title}</h2>
-      </div>
-      <div class="flex gap-2 mt-3">
-        <button id="vidBtn" class="bg-blue-600 px-3 py-2 rounded-xl">🎥 Video</button>
-        <button id="audBtn" class="bg-green-600 px-3 py-2 rounded-xl">🎧 Audio</button>
-      </div>
-    `;
-    document.getElementById("vidBtn").onclick = () => startDownload(url, "video");
-    document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
-  } catch (err) {
-    msg.innerHTML = `<span class="text-red-400">❌ ${err.message}</span>`;
-  }
-});
+        msg.innerHTML = `
+          <div class="mt-3 text-white text-center">
+            <img src="${data.thumbnail}" class="rounded-xl mx-auto mb-3 w-64 border border-gray-700 shadow-lg">
+            <h2 class="text-xl font-semibold">${data.title}</h2>
+            <p class="text-gray-400">${data.duration || ""}</p>
+          </div>
+          <div class="flex justify-center gap-3 mt-3">
+            <button id="vidBtn" class="bg-blue-600 hover:bg-blue-700 transition px-3 py-2 rounded-xl shadow-md">🎥 Video</button>
+            <button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-3 py-2 rounded-xl shadow-md">🎧 Audio</button>
+          </div>
+        `;
 
-async function startDownload(url, mode) {
-  const formData = new FormData();
-  formData.append("url", url);
-  formData.append("mode", mode);
+        document.getElementById("vidBtn").onclick = () => startDownload(url, "video");
+        document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
 
-  currentFileId = Date.now().toString();
-  bar.style.width = "0%";
-  pct.textContent = "0%";
-  msg.innerHTML = "📥 Downloading...";
+        bar.style.width = "30%";
+      } catch (err) {
+        msg.innerHTML = `<span class="text-red-400">❌ ${err.message}</span>`;
+      }
+    });
 
-  const pollProgress = async () => {
-    if (!currentFileId) return;
-    const res = await fetch(`/progress/${currentFileId}`);
-    const percent = await res.text();
-    bar.style.width = percent;
-    pct.textContent = percent;
-    if (percent === "100%") {
-      showToast("✅ Download Complete!");
-      currentFileId = null;
-    } else {
-      setTimeout(pollProgress, 1000);
+    async function startDownload(url, mode) {
+      const formData = new FormData();
+      formData.append("url", url);
+      formData.append("mode", mode);
+
+      currentFileId = Date.now().toString();
+      bar.style.width = "0%";
+      pct.textContent = "0%";
+      msg.innerHTML = "📥 Downloading...";
+
+      pollProgress(currentFileId);
+
+      try {
+        const res = await fetch("/download", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Download failed");
+        const blob = await res.blob();
+        const fileUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = fileUrl;
+        a.download = `${mode === "audio" ? "audio.mp3" : "video.mp4"}`;
+        a.click();
+        URL.revokeObjectURL(fileUrl);
+        showToast("✅ Download Complete!");
+        bar.style.width = "100%";
+        pct.textContent = "100%";
+      } catch (err) {
+        console.error(err);
+        showToast("❌ Download Failed", "error");
+      } finally {
+        currentFileId = null;
+      }
     }
-  };
-  setTimeout(pollProgress, 1000);
 
-  try {
-    const res = await fetch("/download", { method: "POST", body: formData });
-    const blob = await res.blob();
-    const urlBlob = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    a.download = `${mode === "audio" ? "audio.mp3" : "video.mp4"}`;
-    a.click();
-    URL.revokeObjectURL(urlBlob);
-  } catch (err) {
-    console.error(err);
-    showToast("❌ Download failed", "error");
-  }
-}
+    async function pollProgress(id) {
+      if (!id) return;
+      const res = await fetch(`/progress/${id}`);
+      const percent = await res.text();
+      if (percent && percent !== "0%") {
+        bar.style.width = percent;
+        pct.textContent = percent;
+      }
+      if (percent !== "100%" && currentFileId === id) {
+        setTimeout(() => pollProgress(id), 1000);
+      }
+    }
 
-// Toast
-function showToast(text, type = "success") {
-  const toast = document.createElement("div");
-  toast.textContent = text;
-  toast.className = "fixed bottom-6 right-6 px-5 py-3 rounded-xl text-lg shadow-lg z-50";
-  toast.style.transition = "opacity 0.5s ease";
-  toast.style.background = type === "error" ? "#ef4444" : "#22c55e";
-  document.body.appendChild(toast);
-  setTimeout(() => (toast.style.opacity = "0"), 2500);
-  setTimeout(() => toast.remove(), 3000);
-}
-</script>
-
-
-  <!-- ✅ Toast Notification -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-gradient-to-r from-cyan-500 via-blue-500 to-pink-500 
-    text-white px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform translate-y-20 opacity-0 
-    transition-all duration-700 ease-out">
-    ✅ Download Complete!
-    </div>
+    function showToast(text, type = "success") {
+      toast.textContent = text;
+      toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl text-lg font-semibold shadow-2xl transform transition-all duration-500 ease-out";
+      if (type === "error") {
+        toast.classList.add("bg-gradient-to-r", "from-red-500", "via-orange-500", "to-pink-500", "text-white");
+      } else {
+        toast.classList.add("bg-gradient-to-r", "from-green-400", "via-emerald-500", "to-lime-400", "text-black");
+      }
+      toast.classList.remove("hidden");
+      toast.style.opacity = "1";
+      setTimeout(() => (toast.style.opacity = "0"), 3000);
+      setTimeout(() => toast.classList.add("hidden"), 3500);
+    }
+  </script>
 </body>
 </html>
