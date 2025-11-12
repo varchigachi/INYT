@@ -3,30 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YouTube Downloader</title>
+  <title>Universal Downloader</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #bar {
-      animation: pulseGlow 2s infinite alternate ease-in-out;
-    }
+    #bar { animation: pulseGlow 2s infinite alternate ease-in-out; }
     @keyframes pulseGlow {
-      from {
-        box-shadow: 0 0 12px rgba(0, 255, 255, 0.8),
-                    0 0 24px rgba(0, 150, 255, 0.4);
-      }
-      to {
-        box-shadow: 0 0 24px rgba(0, 255, 255, 0.9),
-                    0 0 36px rgba(0, 150, 255, 0.6);
-      }
+      from { box-shadow: 0 0 12px rgba(0,255,255,0.8), 0 0 24px rgba(0,150,255,0.4); }
+      to { box-shadow: 0 0 24px rgba(0,255,255,0.9), 0 0 36px rgba(0,150,255,0.6); }
     }
   </style>
 </head>
-<body class="bg-[#0f172a] min-h-screen flex flex-col items-center justify-center text-white font-sans px-5">
+<body class="bg-[#0f172a] text-white flex flex-col items-center justify-center min-h-screen px-5">
 
-  <h1 class="text-3xl font-bold mb-5 text-cyan-400">🎥 Universal Downloader</h1>
+  <h1 class="text-3xl font-bold text-cyan-400 mb-6">🌐 Universal Downloader</h1>
 
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-5">
+    <button id="ytTab" class="tab-btn bg-cyan-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md">YouTube</button>
+    <button id="igTab" class="tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl">Instagram</button>
+  </div>
+
+  <!-- Form -->
   <form class="flex flex-col items-center gap-3 w-full max-w-md">
-    <input type="text" name="url" placeholder="Paste YouTube or Instagram URL"
+    <input id="urlInput" type="text" placeholder="Paste video URL"
       class="w-full p-3 rounded-xl bg-neutral-800 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
     <button type="submit"
       class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
@@ -36,13 +35,12 @@
 
   <div id="msg" class="mt-6 text-center text-gray-300"></div>
 
-  <!-- Progress Bar -->
+  <!-- Progress -->
   <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden max-w-md">
-    <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl shadow-[0_0_12px_rgba(0,200,255,0.8)] transition-all duration-500 ease-out"></div>
+    <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl transition-all duration-500 ease-out"></div>
     <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl text-lg font-semibold shadow-2xl"></div>
 
   <script>
@@ -51,18 +49,36 @@
     const bar = document.getElementById("bar");
     const pct = document.getElementById("pct");
     const toast = document.getElementById("toast");
+    const ytTab = document.getElementById("ytTab");
+    const igTab = document.getElementById("igTab");
+    let currentPlatform = "youtube";
     let currentFileId = null;
+
+    ytTab.onclick = () => switchTab("youtube");
+    igTab.onclick = () => switchTab("instagram");
+
+    function switchTab(tab) {
+      currentPlatform = tab;
+      if (tab === "youtube") {
+        ytTab.className = "tab-btn bg-cyan-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md";
+        igTab.className = "tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl";
+      } else {
+        igTab.className = "tab-btn bg-pink-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md";
+        ytTab.className = "tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl";
+      }
+      msg.innerHTML = "";
+      document.getElementById("urlInput").value = "";
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const url = form.querySelector("input").value.trim();
+      const url = document.getElementById("urlInput").value.trim();
       if (!url) return;
-
-      msg.innerHTML = "⏳ Fetching video info...";
+      msg.innerHTML = "⏳ Fetching info...";
       bar.style.width = "10%";
-
       const formData = new FormData();
       formData.append("url", url);
+      formData.append("platform", currentPlatform);
 
       try {
         const res = await fetch("/metadata", { method: "POST", body: formData });
@@ -73,16 +89,17 @@
           <div class="mt-3 text-white text-center">
             <img src="${data.thumbnail}" class="rounded-xl mx-auto mb-3 w-64 border border-gray-700 shadow-lg">
             <h2 class="text-xl font-semibold">${data.title}</h2>
-            <p class="text-gray-400">${data.duration || ""}</p>
           </div>
           <div class="flex justify-center gap-3 mt-3">
             <button id="vidBtn" class="bg-blue-600 hover:bg-blue-700 transition px-3 py-2 rounded-xl shadow-md">🎥 Video</button>
-            <button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-3 py-2 rounded-xl shadow-md">🎧 Audio</button>
+            ${currentPlatform === "youtube" ? '<button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-3 py-2 rounded-xl shadow-md">🎧 Audio</button>' : ""}
           </div>
         `;
 
         document.getElementById("vidBtn").onclick = () => startDownload(url, "video");
-        document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
+        if (currentPlatform === "youtube") {
+          document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
+        }
 
         bar.style.width = "30%";
       } catch (err) {
@@ -93,6 +110,7 @@
     async function startDownload(url, mode) {
       const formData = new FormData();
       formData.append("url", url);
+      formData.append("platform", currentPlatform);
       formData.append("mode", mode);
 
       currentFileId = Date.now().toString();
@@ -139,11 +157,11 @@
     function showToast(text, type = "success") {
       toast.textContent = text;
       toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl text-lg font-semibold shadow-2xl transform transition-all duration-500 ease-out";
-      if (type === "error") {
-        toast.classList.add("bg-gradient-to-r", "from-red-500", "via-orange-500", "to-pink-500", "text-white");
-      } else {
-        toast.classList.add("bg-gradient-to-r", "from-green-400", "via-emerald-500", "to-lime-400", "text-black");
-      }
+      toast.classList.add(
+        type === "error"
+          ? "bg-gradient-to-r from-red-500 via-orange-500 to-pink-500 text-white"
+          : "bg-gradient-to-r from-green-400 via-emerald-500 to-lime-400 text-black"
+      );
       toast.classList.remove("hidden");
       toast.style.opacity = "1";
       setTimeout(() => (toast.style.opacity = "0"), 3000);
