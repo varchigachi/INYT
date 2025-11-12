@@ -8,7 +8,7 @@ import imageio_ffmpeg
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
 app = Flask(__name__)
-DOWNLOAD_DIR = "/tmp"  # ✅ use /tmp on Render (temporary but writable)
+DOWNLOAD_DIR = "/tmp"  
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def ffmpeg_installed():
