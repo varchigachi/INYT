@@ -2,30 +2,30 @@ from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
 import uuid
-import shutil
 import imageio_ffmpeg
-import py_mini_racer  # JS runtime for yt-dlp
+import py_mini_racer  # Enables YouTube JS decryption
 
 app = Flask(__name__)
 
-# ----- CONFIG -----
+# --- CONFIG ---
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Write YouTube cookies from Render env variable if present
+# --- Write cookies if provided from Render environment ---
 cookies_env = os.environ.get("YOUTUBE_COOKIES")
 if cookies_env:
     with open("cookies.txt", "w", encoding="utf-8") as f:
         f.write(cookies_env)
 
 
-# ---------- ROUTES ----------
+# ---------- HOME ----------
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
+# ---------- METADATA ----------
 @app.route("/metadata", methods=["POST"])
 def metadata():
     url = request.form.get("url")
@@ -64,9 +64,11 @@ def metadata():
                 "formats": formats[:10]
             })
     except Exception as e:
+        print("Metadata error:", e)
         return jsonify({"error": f"⚠️ Could not fetch metadata: {str(e)}"}), 500
 
 
+# ---------- DOWNLOAD ----------
 @app.route("/download", methods=["POST"])
 def download():
     url = request.form.get("url")
@@ -80,12 +82,18 @@ def download():
     output_template = os.path.join(DOWNLOAD_DIR, f"{file_id}_%(title)s.%(ext)s")
     progress_file = os.path.join(DOWNLOAD_DIR, f"{file_id}_progress.json")
 
-    # function to update progress
     def progress_hook(d):
-        if d["status"] == "downloading":
-            percent = d.get("_percent_str", "0%").strip()
-            with open(progress_file, "w") as f:
-                f.write(percent)
+        """Update progress percentage safely."""
+        try:
+            if d["status"] == "downloading":
+                percent = d.get("_percent_str", "0%").strip()
+                with open(progress_file, "w") as f:
+                    f.write(percent)
+            elif d["status"] == "finished":
+                with open(progress_file, "w") as f:
+                    f.write("100%")
+        except Exception:
+            pass
 
     ydl_opts = {
         "outtmpl": output_template,
@@ -94,7 +102,7 @@ def download():
         "ffmpeg_location": ffmpeg_path,
         "progress_hooks": [progress_hook],
         "extractor_args": {"youtube": ["player_client=android"]},
-        "no_warnings": True
+        "no_warnings": True,
     }
 
     if os.path.exists("cookies.txt"):
@@ -124,11 +132,9 @@ def download():
                 if os.path.exists(mp3_path):
                     file_path = mp3_path
 
-        # Cleanup progress file when done
         if os.path.exists(progress_file):
             os.remove(progress_file)
 
-        print("✅ Sending file:", file_path)
         response = send_file(
             file_path,
             as_attachment=True,
@@ -149,7 +155,9 @@ def download():
     except Exception as e:
         print("Download error:", e)
         return f"❌ Error: {str(e)}", 500
-        
+
+
+# ---------- PROGRESS ----------
 @app.route("/progress/<file_id>")
 def progress(file_id):
     progress_file = os.path.join(DOWNLOAD_DIR, f"{file_id}_progress.json")
@@ -157,6 +165,7 @@ def progress(file_id):
         with open(progress_file) as f:
             return f.read()
     return "0%"
+
 
 # ---------- RUN ----------
 if __name__ == "__main__":
