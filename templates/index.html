@@ -6,43 +6,105 @@
   <title>Universal Downloader</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #bar { animation: pulseGlow 2s infinite alternate ease-in-out; }
+    /* Background gradient animation */
+    body {
+      background: radial-gradient(circle at top, #0f172a 0%, #020617 100%);
+      background-attachment: fixed;
+      font-family: 'Poppins', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .glass {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Animated glowing progress bar */
+    #bar {
+      animation: pulseGlow 2s infinite alternate ease-in-out;
+    }
+
     @keyframes pulseGlow {
-      from { box-shadow: 0 0 12px rgba(0,255,255,0.8), 0 0 24px rgba(0,150,255,0.4); }
-      to { box-shadow: 0 0 24px rgba(0,255,255,0.9), 0 0 36px rgba(0,150,255,0.6); }
+      from {
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.8),
+                    0 0 24px rgba(0, 150, 255, 0.4);
+      }
+      to {
+        box-shadow: 0 0 30px rgba(0, 255, 255, 1),
+                    0 0 50px rgba(0, 150, 255, 0.8);
+      }
+    }
+
+    .tab-active {
+      background: linear-gradient(to right, #22d3ee, #3b82f6, #9333ea);
+      color: #000;
+      font-weight: 600;
+    }
+
+    .tab-inactive {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ccc;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #toast {
+      backdrop-filter: blur(8px);
     }
   </style>
 </head>
-<body class="bg-[#0f172a] text-white flex flex-col items-center justify-center min-h-screen px-5">
+<body class="flex flex-col items-center justify-center min-h-screen px-4 text-white">
 
-  <h1 class="text-3xl font-bold text-cyan-400 mb-6">🌐 Universal Downloader</h1>
+  <!-- Header -->
+  <h1 class="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 text-transparent bg-clip-text drop-shadow-md">
+    🌐 Universal Downloader
+  </h1>
 
   <!-- Tabs -->
-  <div class="flex gap-2 mb-5">
-    <button id="ytTab" class="tab-btn bg-cyan-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md">YouTube</button>
-    <button id="igTab" class="tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl">Instagram</button>
+  <div class="flex gap-3 mb-6">
+    <button id="ytTab" class="px-5 py-2 rounded-xl shadow-md transition tab-active">YouTube</button>
+    <button id="igTab" class="px-5 py-2 rounded-xl shadow-md transition tab-inactive">Instagram</button>
   </div>
 
-  <!-- Form -->
-  <form class="flex flex-col items-center gap-3 w-full max-w-md">
-    <input id="urlInput" type="text" placeholder="Paste video URL"
-      class="w-full p-3 rounded-xl bg-neutral-800 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
-    <button type="submit"
-      class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
-      🔍 Fetch Details
-    </button>
-  </form>
+  <!-- Glass card -->
+  <div class="glass p-8 rounded-2xl w-full max-w-lg fade-in">
+    <!-- Input form -->
+    <form class="flex flex-col items-center gap-3 w-full">
+      <input id="urlInput" type="text" placeholder="Paste video URL here..."
+        class="w-full p-3 rounded-xl bg-neutral-800 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
+      <button type="submit"
+        class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
+        🔍 Fetch Details
+      </button>
+    </form>
 
-  <div id="msg" class="mt-6 text-center text-gray-300"></div>
+    <!-- Video Info -->
+    <div id="msg" class="mt-6 text-center text-gray-300"></div>
 
-  <!-- Progress -->
-  <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden max-w-md">
-    <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl transition-all duration-500 ease-out"></div>
-    <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
+    <!-- Progress Bar -->
+    <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden">
+      <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl transition-all duration-500 ease-out"></div>
+      <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
+    </div>
   </div>
 
-  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl text-lg font-semibold shadow-2xl"></div>
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl text-lg font-semibold shadow-2xl text-white"></div>
 
+  <footer class="text-gray-500 text-sm mt-6">
+    Made with ❤️ by <span class="text-cyan-400">Srujan</span>
+  </footer>
+
+  <!-- Script -->
   <script>
     const form = document.querySelector("form");
     const msg = document.getElementById("msg");
@@ -60,11 +122,11 @@
     function switchTab(tab) {
       currentPlatform = tab;
       if (tab === "youtube") {
-        ytTab.className = "tab-btn bg-cyan-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md";
-        igTab.className = "tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl";
+        ytTab.className = "px-5 py-2 rounded-xl shadow-md tab-active";
+        igTab.className = "px-5 py-2 rounded-xl shadow-md tab-inactive";
       } else {
-        igTab.className = "tab-btn bg-pink-500 text-black font-semibold px-4 py-2 rounded-xl shadow-md";
-        ytTab.className = "tab-btn bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-xl";
+        igTab.className = "px-5 py-2 rounded-xl shadow-md tab-active";
+        ytTab.className = "px-5 py-2 rounded-xl shadow-md tab-inactive";
       }
       msg.innerHTML = "";
       document.getElementById("urlInput").value = "";
@@ -76,6 +138,7 @@
       if (!url) return;
       msg.innerHTML = "⏳ Fetching info...";
       bar.style.width = "10%";
+
       const formData = new FormData();
       formData.append("url", url);
       formData.append("platform", currentPlatform);
@@ -86,13 +149,16 @@
         if (data.error) throw new Error(data.error);
 
         msg.innerHTML = `
-          <div class="mt-3 text-white text-center">
+          <div class="fade-in mt-3 text-white text-center">
             <img src="${data.thumbnail}" class="rounded-xl mx-auto mb-3 w-64 border border-gray-700 shadow-lg">
             <h2 class="text-xl font-semibold">${data.title}</h2>
+            <p class="text-gray-400 text-sm">${data.duration || ""}</p>
           </div>
-          <div class="flex justify-center gap-3 mt-3">
-            <button id="vidBtn" class="bg-blue-600 hover:bg-blue-700 transition px-3 py-2 rounded-xl shadow-md">🎥 Video</button>
-            ${currentPlatform === "youtube" ? '<button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-3 py-2 rounded-xl shadow-md">🎧 Audio</button>' : ""}
+          <div class="flex justify-center gap-3 mt-4">
+            <button id="vidBtn" class="bg-blue-600 hover:bg-blue-700 transition px-4 py-2 rounded-xl shadow-md">🎥 Video</button>
+            ${currentPlatform === "youtube"
+              ? '<button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-4 py-2 rounded-xl shadow-md">🎧 Audio</button>'
+              : ""}
           </div>
         `;
 
@@ -100,8 +166,6 @@
         if (currentPlatform === "youtube") {
           document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
         }
-
-        bar.style.width = "30%";
       } catch (err) {
         msg.innerHTML = `<span class="text-red-400">❌ ${err.message}</span>`;
       }
@@ -156,7 +220,8 @@
 
     function showToast(text, type = "success") {
       toast.textContent = text;
-      toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl text-lg font-semibold shadow-2xl transform transition-all duration-500 ease-out";
+      toast.className =
+        "fixed bottom-6 right-6 px-6 py-4 rounded-xl text-lg font-semibold shadow-2xl transform transition-all duration-500 ease-out";
       toast.classList.add(
         type === "error"
           ? "bg-gradient-to-r from-red-500 via-orange-500 to-pink-500 text-white"
