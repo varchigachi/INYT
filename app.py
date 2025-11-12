@@ -65,7 +65,7 @@ def download():
         "outtmpl": output_template,
         "quiet": True,
         "merge_output_format": "mp4",
-        "ffmpeg_location": ffmpeg-path,
+        "ffmpeg_location": ffmpeg_path,
     }
 
     if mode == "audio":
