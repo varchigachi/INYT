@@ -71,6 +71,7 @@ def download():
 
     ydl_opts = {
     "quiet": True,
+    "cookiefile": "cookies.txt",
     "skip_download": True,
     "extractor_args": {"youtube": ["player_client=android"]},  # ✅ Android client
     "no_warnings": True,
