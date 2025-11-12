@@ -3,6 +3,9 @@ import yt_dlp
 import os
 import uuid
 import shutil
+import imageio_ffmpeg
+
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
 app = Flask(__name__)
 DOWNLOAD_DIR = "/tmp"  # ✅ use /tmp on Render (temporary but writable)
