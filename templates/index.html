@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Downloader</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: radial-gradient(circle at top right, #0f172a, #020617 70%);
+  }
+  .glass {
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  select option { background: #0f172a; color: white; }
+  .progress { transition: width 0.3s ease; }
+  .glow {
+    animation: glowPulse 2s ease-in-out infinite alternate;
+  }
+  @keyframes glowPulse {
+    from { filter: drop-shadow(0 0 6px #00f2ff); }
+    to { filter: drop-shadow(0 0 20px #00f2ff); }
+  }
+  @keyframes slideUpFade {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.show-toast {
+  display: block !important;
+  animation: slideUpFade 0.6s ease-out forwards;
+}
+.hide-toast {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+</style>
+</head>
+<body class="text-white flex flex-col justify-center items-center min-h-screen">
+
+  <!-- HEADER -->
+  <h1 class="text-5xl font-extrabold bg-gradient-to-r from-blue-400 via-cyan-400 to-pink-500 bg-clip-text text-transparent mb-4">
+    Smart Video & Audio Downloader
+  </h1>
+  <p class="text-gray-400 mb-10 text-center text-lg">
+    🎬 Download from YouTube • Shorts • Instagram in full HD or MP3
+  </p>
+
+  <!-- MAIN CARD -->
+  <div class="glass p-8 rounded-2xl w-11/12 max-w-lg">
+    <form id="form" class="space-y-5">
+      <!-- URL Input -->
+      <input id="url" name="url" placeholder="Paste YouTube / Instagram link..."
+        class="w-full px-4 py-3 rounded-lg bg-black/50 text-white border border-white/20 focus:ring-4 focus:ring-cyan-400 outline-none" />
+
+      <!-- Format dropdown -->
+      <select id="format" name="format_id"
+        class="w-full px-4 py-3 rounded-lg bg-black text-gray-200 border border-white/20 focus:ring-4 focus:ring-blue-500 outline-none">
+        <option>Select format...</option>
+      </select>
+
+      <!-- Buttons -->
+      <div class="flex space-x-3">
+        <button type="submit" id="videoBtn"
+          class="w-1/2 py-3 bg-gradient-to-r from-blue-600 via-cyan-400 to-pink-500 rounded-xl font-semibold hover:scale-[1.02] transition-all duration-300">
+          🎥 Download Video
+        </button>
+        <button type="button" id="audioBtn"
+          class="w-1/2 py-3 bg-gradient-to-r from-pink-600 via-purple-400 to-red-500 rounded-xl font-semibold hover:scale-[1.02] transition-all duration-300">
+          🎧 Download Audio
+        </button>
+      </div>
+    </form>
+
+    <!-- Preview -->
+    <div id="preview" class="hidden mt-6 text-center">
+      <img id="thumb" class="mx-auto rounded-lg w-60 h-34 object-cover shadow-lg" />
+      <h3 id="title" class="mt-3 text-lg font-semibold"></h3>
+      <p id="platform" class="text-gray-400 text-sm"></p>
+    </div>
+
+    <!-- Progress Bar -->
+    <div id="progressBox" class="hidden mt-6">
+      <div class="w-full bg-white/10 h-3 rounded-full">
+        <div id="bar" class="bg-gradient-to-r from-cyan-400 to-pink-500 h-3 rounded-full progress" style="width:0%"></div>
+      </div>
+      <p id="pct" class="text-center text-sm text-gray-400 mt-2">0%</p>
+    </div>
+
+    <!-- Message -->
+    <div id="msg" class="mt-4 text-center text-lg font-medium"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="mt-12 text-gray-500 text-sm text-center">
+    Built with ❤️ by <span class="text-cyan-400">Srujan</span>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script>
+    function showToast(text, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = text;
+
+    // Reset base styling
+    toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform transition-all duration-700 ease-out";
+
+    // Apply color theme based on toast type
+    if (type === "success") {
+        toast.classList.add("bg-gradient-to-r", "from-green-400", "via-emerald-500", "to-lime-400", "text-black");
+    } else {
+        toast.classList.add("bg-gradient-to-r", "from-red-500", "via-orange-500", "to-pink-500", "text-white");
+    }
+
+    // Show and animate
+    toast.classList.remove("hidden", "hide-toast");
+    toast.classList.add("show-toast");
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        toast.classList.add("hide-toast");
+        setTimeout(() => toast.classList.add("hidden"), 500);
+    }, 4000);
+    }
+
+
+    const url=document.getElementById("url"),
+      format=document.getElementById("format"),
+      thumb=document.getElementById("thumb"),
+      title=document.getElementById("title"),
+      preview=document.getElementById("preview"),
+      msg=document.getElementById("msg"),
+      form=document.getElementById("form"),
+      videoBtn=document.getElementById("videoBtn"),
+      audioBtn=document.getElementById("audioBtn"),
+      progressBox=document.getElementById("progressBox"),
+      bar=document.getElementById("bar"),
+      pct=document.getElementById("pct"),
+      platform=document.getElementById("platform");
+
+    let pid=null, mode="video";
+
+    // Fetch metadata
+    url.addEventListener("change",async()=>{
+      msg.textContent="Fetching info...";
+      const fd=new FormData();fd.append("url",url.value);
+      const r=await fetch("/metadata",{method:"POST",body:fd});
+      const d=await r.json();
+      if(d.thumbnail){
+        preview.classList.remove("hidden");
+        thumb.src=d.thumbnail;
+        title.textContent=d.title;
+      }
+      platform.textContent=d.platform==="instagram"?"📸 Instagram":
+        d.platform==="youtube_shorts"?"📱 YouTube Shorts":"🎬 YouTube Video";
+      msg.textContent="";
+      format.innerHTML="";
+      d.formats?.forEach(f=>{
+        const opt=document.createElement("option");
+        opt.value=f.id;
+        opt.textContent=`${f.ext.toUpperCase()} • ${f.res}p • ${f.filesize} MB`;
+        format.appendChild(opt);
+      });
+    });
+
+    // Start progress tracker
+    function startProgress(){
+      progressBox.classList.remove("hidden");
+      thumb.classList.add("glow");
+      let interval=setInterval(async()=>{
+        if(!pid)return;
+        const res=await fetch(`/progress/${pid}`);
+        const d=await res.json();
+        const p=parseFloat(d.progress);
+        bar.style.width=p+"%";
+        pct.textContent=d.progress;
+        if(p>=100){
+          clearInterval(interval);
+          pct.textContent="Converting...";
+          setTimeout(fetchFile,1500);
+        }
+      },1000);
+    }
+
+    // Fetch finished file
+    async function fetchFile(){
+      const r=await fetch(`/fetch/${pid}`);
+      if(!r.ok){msg.textContent="❌ File not ready";return;}
+      const blob=await r.blob();
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download=mode==="audio"?"audio.mp3":"video.mp4";
+      a.click();
+      thumb.classList.remove("glow");
+      showToast("✅ Download Complete!");
+      bar.style.width="0%";
+      pct.textContent="0%";
+    }
+
+    // Start download
+    function download(selected){
+      mode=selected;
+      msg.textContent="⏳ Starting download...";
+      const fd=new FormData(form);
+      fd.append("mode",selected);
+      fetch("/download",{method:"POST",body:fd})
+        .then(r=>r.json())
+        .then(d=>{
+          pid=d.pid;
+          msg.textContent="Downloading...";
+          startProgress();
+        })
+        .catch(()=>msg.textContent="❌ Download failed");
+    }
+
+    form.addEventListener("submit",e=>{
+      e.preventDefault();
+      download("video");
+    });
+    audioBtn.addEventListener("click",()=>download("audio"));
+  </script>
+  <!-- ✅ Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-gradient-to-r from-cyan-500 via-blue-500 to-pink-500 
+    text-white px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform translate-y-20 opacity-0 
+    transition-all duration-700 ease-out">
+    ✅ Download Complete!
+    </div>
+</body>
+</html>
