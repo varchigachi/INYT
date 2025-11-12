@@ -1,30 +1,30 @@
 from flask import Flask, render_template, request, send_file, jsonify
-import py_mini_racer
 import yt_dlp
 import os
 import uuid
 import shutil
 import imageio_ffmpeg
+import py_mini_racer  # JS runtime for yt-dlp
 
+app = Flask(__name__)
+
+# ----- CONFIG -----
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Write the cookies from environment to a temp file if present
+# Write YouTube cookies from Render env variable if present
 cookies_env = os.environ.get("YOUTUBE_COOKIES")
 if cookies_env:
     with open("cookies.txt", "w", encoding="utf-8") as f:
         f.write(cookies_env)
 
 
-app = Flask(__name__)
-DOWNLOAD_DIR = "/tmp"  
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-def ffmpeg_installed():
-    return shutil.which("ffmpeg") is not None
-
+# ---------- ROUTES ----------
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/metadata", methods=["POST"])
 def metadata():
@@ -32,7 +32,17 @@ def metadata():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    ydl_opts = {"quiet": True, "skip_download": True}
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "extractor_args": {"youtube": ["player_client=android"]},
+        "no_warnings": True,
+        "ffmpeg_location": ffmpeg_path,
+    }
+
+    if os.path.exists("cookies.txt"):
+        ydl_opts["cookiefile"] = "cookies.txt"
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -54,7 +64,7 @@ def metadata():
                 "formats": formats[:10]
             })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"⚠️ Could not fetch metadata: {str(e)}"}), 500
 
 
 @app.route("/download", methods=["POST"])
@@ -70,13 +80,16 @@ def download():
     output_template = os.path.join(DOWNLOAD_DIR, f"{file_id}_%(title)s.%(ext)s")
 
     ydl_opts = {
-    "quiet": True,
-    "cookiefile": "cookies.txt",
-    "skip_download": True,
-    "extractor_args": {"youtube": ["player_client=android"]},  # ✅ Android client
-    "no_warnings": True,
-    "ffmpeg_location": ffmpeg_path,
+        "outtmpl": output_template,
+        "quiet": True,
+        "merge_output_format": "mp4",
+        "ffmpeg_location": ffmpeg_path,
+        "extractor_args": {"youtube": ["player_client=android"]},
+        "no_warnings": True
     }
+
+    if os.path.exists("cookies.txt"):
+        ydl_opts["cookiefile"] = "cookies.txt"
 
     if mode == "audio":
         ydl_opts.update({
@@ -93,8 +106,8 @@ def download():
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
+            ydl.process_info(info)
             file_path = ydl.prepare_filename(info)
-            ydl.process_info(info)  # ensures post-processing completes
 
             if mode == "audio":
                 base, _ = os.path.splitext(file_path)
@@ -102,10 +115,30 @@ def download():
                 if os.path.exists(mp3_path):
                     file_path = mp3_path
 
-        return send_file(file_path, as_attachment=True)
+        print("✅ Sending file:", file_path)
+        response = send_file(
+            file_path,
+            as_attachment=True,
+            download_name=os.path.basename(file_path),
+            mimetype="application/octet-stream",
+            max_age=0
+        )
+
+        @response.call_on_close
+        def cleanup():
+            try:
+                os.remove(file_path)
+            except:
+                pass
+
+        return response
+
     except Exception as e:
+        print("Download error:", e)
         return f"❌ Error: {str(e)}", 500
 
+
+# ---------- RUN ----------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
