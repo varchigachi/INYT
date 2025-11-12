@@ -102,127 +102,107 @@
 
   <!-- SCRIPTS -->
   <script>
-    function showToast(text, type = "success") {
-    const toast = document.getElementById("toast");
-    toast.textContent = text;
+const form = document.querySelector("form");
+const msg = document.getElementById("msg");
+const bar = document.getElementById("bar");
+const pct = document.getElementById("pct");
+const thumb = document.getElementById("thumb");
+let mode = "video";
 
-    // Reset base styling
-    toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform transition-all duration-700 ease-out";
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const url = form.querySelector("input").value.trim();
+  if (!url) return;
 
-    // Apply color theme based on toast type
-    if (type === "success") {
-        toast.classList.add("bg-gradient-to-r", "from-green-400", "via-emerald-500", "to-lime-400", "text-black");
-    } else {
-        toast.classList.add("bg-gradient-to-r", "from-red-500", "via-orange-500", "to-pink-500", "text-white");
-    }
+  msg.innerHTML = "⏳ Fetching video info...";
+  bar.style.width = "10%";
 
-    // Show and animate
-    toast.classList.remove("hidden", "hide-toast");
-    toast.classList.add("show-toast");
+  try {
+    const formData = new FormData();
+    formData.append("url", url);
 
-    // Auto-hide after 4 seconds
-    setTimeout(() => {
-        toast.classList.add("hide-toast");
-        setTimeout(() => toast.classList.add("hidden"), 500);
-    }, 4000);
-    }
+    const res = await fetch("/metadata", { method: "POST", body: formData });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
 
+    msg.innerHTML = `
+      <div class="mt-3 text-white">
+        <img src="${data.thumbnail}" alt="thumbnail" class="rounded-xl mb-3 w-64">
+        <h2 class="text-xl font-semibold">${data.title}</h2>
+        <p class="text-gray-400">${data.duration || ""}</p>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button id="vidBtn" class="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl">🎥 Download Video</button>
+        <button id="audBtn" class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-xl">🎧 Download Audio</button>
+      </div>
+    `;
 
-    const url=document.getElementById("url"),
-      format=document.getElementById("format"),
-      thumb=document.getElementById("thumb"),
-      title=document.getElementById("title"),
-      preview=document.getElementById("preview"),
-      msg=document.getElementById("msg"),
-      form=document.getElementById("form"),
-      videoBtn=document.getElementById("videoBtn"),
-      audioBtn=document.getElementById("audioBtn"),
-      progressBox=document.getElementById("progressBox"),
-      bar=document.getElementById("bar"),
-      pct=document.getElementById("pct"),
-      platform=document.getElementById("platform");
+    document.getElementById("vidBtn").onclick = () => downloadFile(url, "video");
+    document.getElementById("audBtn").onclick = () => downloadFile(url, "audio");
 
-    let pid=null, mode="video";
+    bar.style.width = "60%";
+  } catch (err) {
+    msg.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
+  }
+});
 
-    // Fetch metadata
-    url.addEventListener("change",async()=>{
-      msg.textContent="Fetching info...";
-      const fd=new FormData();fd.append("url",url.value);
-      const r=await fetch("/metadata",{method:"POST",body:fd});
-      const d=await r.json();
-      if(d.thumbnail){
-        preview.classList.remove("hidden");
-        thumb.src=d.thumbnail;
-        title.textContent=d.title;
-      }
-      platform.textContent=d.platform==="instagram"?"📸 Instagram":
-        d.platform==="youtube_shorts"?"📱 YouTube Shorts":"🎬 YouTube Video";
-      msg.textContent="";
-      format.innerHTML="";
-      d.formats?.forEach(f=>{
-        const opt=document.createElement("option");
-        opt.value=f.id;
-        opt.textContent=`${f.ext.toUpperCase()} • ${f.res}p • ${f.filesize} MB`;
-        format.appendChild(opt);
-      });
+async function downloadFile(url, type) {
+  mode = type;
+  msg.innerHTML = "📥 Preparing download...";
+  bar.style.width = "80%";
+
+  const formData = new FormData();
+  formData.append("url", url);
+  formData.append("mode", type);
+
+  try {
+    const res = await fetch("/download", {
+      method: "POST",
+      body: formData,
+      cache: "no-store",
     });
 
-    // Start progress tracker
-    function startProgress(){
-      progressBox.classList.remove("hidden");
-      thumb.classList.add("glow");
-      let interval=setInterval(async()=>{
-        if(!pid)return;
-        const res=await fetch(`/progress/${pid}`);
-        const d=await res.json();
-        const p=parseFloat(d.progress);
-        bar.style.width=p+"%";
-        pct.textContent=d.progress;
-        if(p>=100){
-          clearInterval(interval);
-          pct.textContent="Converting...";
-          setTimeout(fetchFile,1500);
-        }
-      },1000);
-    }
+    if (!res.ok) throw new Error("Download failed");
 
-    // Fetch finished file
-    async function fetchFile(){
-      const r=await fetch(`/fetch/${pid}`);
-      if(!r.ok){msg.textContent="❌ File not ready";return;}
-      const blob=await r.blob();
-      const a=document.createElement("a");
-      a.href=URL.createObjectURL(blob);
-      a.download=mode==="audio"?"audio.mp3":"video.mp4";
-      a.click();
-      thumb.classList.remove("glow");
-      showToast("✅ Download Complete!");
-      bar.style.width="0%";
-      pct.textContent="0%";
-    }
+    // Force browser to download file as binary
+    const blob = await res.blob();
+    const fileUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = fileUrl;
+    a.download = `${Date.now()}_${type === "audio" ? "audio.mp3" : "video.mp4"}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(fileUrl);
 
-    // Start download
-    function download(selected){
-      mode=selected;
-      msg.textContent="⏳ Starting download...";
-      const fd=new FormData(form);
-      fd.append("mode",selected);
-      fetch("/download",{method:"POST",body:fd})
-        .then(r=>r.json())
-        .then(d=>{
-          pid=d.pid;
-          msg.textContent="Downloading...";
-          startProgress();
-        })
-        .catch(()=>msg.textContent="❌ Download failed");
-    }
+    bar.style.width = "100%";
+    pct.textContent = "100%";
+    showToast("✅ Download Complete!");
+  } catch (err) {
+    console.error(err);
+    msg.innerHTML = `<span class="text-red-400">❌ Download failed. Try again.</span>`;
+    showToast("❌ Download Failed!", "error");
+  }
+}
 
-    form.addEventListener("submit",e=>{
-      e.preventDefault();
-      download("video");
-    });
-    audioBtn.addEventListener("click",()=>download("audio"));
-  </script>
+// Toast notification
+function showToast(text, type = "success") {
+  const toast = document.getElementById("toast");
+  toast.textContent = text;
+
+  toast.className = "fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform transition-all duration-700 ease-out";
+  if (type === "success") {
+    toast.classList.add("bg-gradient-to-r", "from-green-400", "via-emerald-500", "to-lime-400", "text-black");
+  } else {
+    toast.classList.add("bg-gradient-to-r", "from-red-500", "via-orange-500", "to-pink-500", "text-white");
+  }
+
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("opacity-0"), 4000);
+  setTimeout(() => toast.classList.add("hidden"), 4500);
+}
+</script>
+
   <!-- ✅ Toast Notification -->
     <div id="toast" class="hidden fixed bottom-6 right-6 bg-gradient-to-r from-cyan-500 via-blue-500 to-pink-500 
     text-white px-6 py-4 rounded-xl shadow-2xl font-semibold text-lg transform translate-y-20 opacity-0 
