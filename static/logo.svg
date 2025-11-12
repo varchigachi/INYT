@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="ud-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <filter id="ud-glow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- draw ring -->
+  <circle cx="60" cy="60" r="46" fill="none" stroke="url(#ud-grad)" stroke-width="5"
+          stroke-dasharray="289" stroke-dashoffset="289" filter="url(#ud-glow)">
+    <animate attributeName="stroke-dashoffset" values="289;0" dur="1.6s" fill="freeze"/>
+  </circle>
+
+  <!-- subtle outer orbit -->
+  <circle cx="60" cy="60" r="55" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1">
+    <animateTransform attributeName="transform" type="rotate"
+                      from="0 60 60" to="360 60 60" dur="6s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- download triangle -->
+  <polygon points="60,36 44,78 76,78" fill="url(#ud-grad)" opacity="0">
+    <animate attributeName="opacity" from="0" to="1" dur="0.8s" begin="0.9s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate"
+                      from="0 -8" to="0 0" dur="0.8s" begin="0.9s" fill="freeze"/>
+  </polygon>
+</svg>
