@@ -4,108 +4,185 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Universal Downloader</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    /* Background gradient animation */
     body {
       background: radial-gradient(circle at top, #0f172a 0%, #020617 100%);
-      background-attachment: fixed;
+      overflow: hidden;
+      height: 100vh;
       font-family: 'Poppins', sans-serif;
-      overflow-x: hidden;
     }
 
+    /* Particle Background */
+    #particles {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute;
+      background: radial-gradient(circle, rgba(255,255,255,0.8), transparent);
+      border-radius: 50%;
+      opacity: 0.3;
+      animation: float 20s linear infinite;
+    }
+    @keyframes float {
+      from { transform: translateY(0) rotate(0deg); }
+      to { transform: translateY(-200vh) rotate(360deg); }
+    }
+
+    /* Glass UI */
     .glass {
       backdrop-filter: blur(20px);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease;
     }
+    .glass:hover { transform: scale(1.01); }
 
-    /* Animated glowing progress bar */
+    /* Progress Glow */
     #bar {
       animation: pulseGlow 2s infinite alternate ease-in-out;
     }
-
     @keyframes pulseGlow {
-      from {
-        box-shadow: 0 0 12px rgba(0, 255, 255, 0.8),
-                    0 0 24px rgba(0, 150, 255, 0.4);
-      }
-      to {
-        box-shadow: 0 0 30px rgba(0, 255, 255, 1),
-                    0 0 50px rgba(0, 150, 255, 0.8);
-      }
+      from { box-shadow: 0 0 12px rgba(0,255,255,0.8), 0 0 24px rgba(0,150,255,0.4); }
+      to { box-shadow: 0 0 30px rgba(0,255,255,1), 0 0 60px rgba(0,150,255,0.8); }
     }
 
+    /* Tabs */
     .tab-active {
       background: linear-gradient(to right, #22d3ee, #3b82f6, #9333ea);
       color: #000;
       font-weight: 600;
     }
-
     .tab-inactive {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255,255,255,0.08);
       color: #ccc;
     }
 
-    .fade-in {
-      animation: fadeIn 0.6s ease forwards;
-    }
+    /* Toast */
+    #toast { backdrop-filter: blur(8px); }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+    /* Splash Intro */
+    #splash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at center, #020617, #0f172a 80%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 1;
+      transition: opacity 1.2s ease;
+    }
+    .splash-title {
+      margin-top: 25px;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #22d3ee, #3b82f6, #9333ea);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 25px rgba(147,51,234,0.4);
+      animation: fadeText 2.5s ease forwards;
+    }
+    @keyframes fadeText {
+      from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    #toast {
-      backdrop-filter: blur(8px);
+    /* Fade-in Transition */
+    .fade-in { animation: fadeIn 0.6s ease forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen px-4 text-white">
 
-  <!-- Header -->
-  <h1 class="text-4xl font-bold mb-8 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 text-transparent bg-clip-text drop-shadow-md">
-    🌐 Universal Downloader
-  </h1>
+<body class="text-white flex flex-col items-center justify-center min-h-screen px-4">
 
-  <!-- Tabs -->
-  <div class="flex gap-3 mb-6">
-    <button id="ytTab" class="px-5 py-2 rounded-xl shadow-md transition tab-active">YouTube</button>
-    <button id="igTab" class="px-5 py-2 rounded-xl shadow-md transition tab-inactive">Instagram</button>
+  <!-- 🌌 Background Particles -->
+  <div id="particles"></div>
+
+  <!-- 🚀 Splash Screen -->
+  <div id="splash">
+    <img src="{{ url_for('static', filename='logo.svg') }}" class="w-32 h-32" alt="App Logo" />
+    <h1 class="splash-title">Universal Downloader</h1>
   </div>
 
-  <!-- Glass card -->
-  <div class="glass p-8 rounded-2xl w-full max-w-lg fade-in">
-    <!-- Input form -->
-    <form class="flex flex-col items-center gap-3 w-full">
-      <input id="urlInput" type="text" placeholder="Paste video URL here..."
-        class="w-full p-3 rounded-xl bg-neutral-800 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
-      <button type="submit"
-        class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
-        🔍 Fetch Details
-      </button>
-    </form>
+  <!-- 🌐 Main App -->
+  <div id="main" class="opacity-0 pointer-events-none transition-opacity duration-1000 flex flex-col items-center justify-center">
+    <h1 class="text-5xl font-bold mb-10 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 text-transparent bg-clip-text drop-shadow-lg">
+      🌐 Universal Downloader
+    </h1>
 
-    <!-- Video Info -->
-    <div id="msg" class="mt-6 text-center text-gray-300"></div>
+    <div class="flex gap-4 mb-6">
+      <button id="ytTab" class="px-5 py-2 rounded-xl shadow-md transition tab-active">YouTube</button>
+      <button id="igTab" class="px-5 py-2 rounded-xl shadow-md transition tab-inactive">Instagram</button>
+    </div>
 
-    <!-- Progress Bar -->
-    <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden">
-      <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl transition-all duration-500 ease-out"></div>
-      <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
+    <div class="glass p-8 rounded-2xl w-full max-w-lg fade-in">
+      <form class="flex flex-col items-center gap-3 w-full">
+        <input id="urlInput" type="text" placeholder="Paste video URL here..."
+          class="w-full p-3 rounded-xl bg-neutral-900/80 border border-neutral-700 text-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none" />
+        <button type="submit"
+          class="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-black font-semibold py-2 rounded-xl shadow-md hover:opacity-90 transition">
+          🔍 Fetch Details
+        </button>
+      </form>
+
+      <div id="msg" class="mt-6 text-center text-gray-300"></div>
+
+      <div id="progressWrapper" class="w-full bg-neutral-800 h-3 rounded-2xl mt-6 relative overflow-hidden">
+        <div id="bar" class="h-3 w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-2xl transition-all duration-500 ease-out"></div>
+        <span id="pct" class="absolute right-3 top-[-28px] text-sm text-gray-300 font-semibold">0%</span>
+      </div>
     </div>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-5 py-4 rounded-xl text-lg font-semibold shadow-2xl text-white"></div>
 
-  <footer class="text-gray-500 text-sm mt-6">
+  <footer class="text-gray-500 text-sm mt-8">
     Made with ❤️ by <span class="text-cyan-400">Srujan</span>
   </footer>
 
-  <!-- Script -->
   <script>
+    // 🌠 Particle Background
+    const particleContainer = document.getElementById("particles");
+    for (let i = 0; i < 40; i++) {
+      const particle = document.createElement("div");
+      particle.classList.add("particle");
+      const size = Math.random() * 6 + 2;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      particle.style.left = `${Math.random() * 100}%`;
+      particle.style.top = `${Math.random() * 100}%`;
+      particle.style.animationDuration = `${10 + Math.random() * 20}s`;
+      particle.style.animationDelay = `${Math.random() * 20}s`;
+      particleContainer.appendChild(particle);
+    }
+
+    // 🚀 Splash transition
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        const main = document.getElementById("main");
+        splash.style.opacity = "0";
+        setTimeout(() => {
+          splash.style.display = "none";
+          main.classList.remove("opacity-0", "pointer-events-none");
+        }, 1200);
+      }, 2300);
+    });
+
+    // 🔥 App logic
     const form = document.querySelector("form");
     const msg = document.getElementById("msg");
     const bar = document.getElementById("bar");
@@ -121,13 +198,8 @@
 
     function switchTab(tab) {
       currentPlatform = tab;
-      if (tab === "youtube") {
-        ytTab.className = "px-5 py-2 rounded-xl shadow-md tab-active";
-        igTab.className = "px-5 py-2 rounded-xl shadow-md tab-inactive";
-      } else {
-        igTab.className = "px-5 py-2 rounded-xl shadow-md tab-active";
-        ytTab.className = "px-5 py-2 rounded-xl shadow-md tab-inactive";
-      }
+      ytTab.className = tab === "youtube" ? "px-5 py-2 rounded-xl shadow-md tab-active" : "px-5 py-2 rounded-xl shadow-md tab-inactive";
+      igTab.className = tab === "instagram" ? "px-5 py-2 rounded-xl shadow-md tab-active" : "px-5 py-2 rounded-xl shadow-md tab-inactive";
       msg.innerHTML = "";
       document.getElementById("urlInput").value = "";
     }
@@ -138,16 +210,13 @@
       if (!url) return;
       msg.innerHTML = "⏳ Fetching info...";
       bar.style.width = "10%";
-
       const formData = new FormData();
       formData.append("url", url);
       formData.append("platform", currentPlatform);
-
       try {
         const res = await fetch("/metadata", { method: "POST", body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-
         msg.innerHTML = `
           <div class="fade-in mt-3 text-white text-center">
             <img src="${data.thumbnail}" class="rounded-xl mx-auto mb-3 w-64 border border-gray-700 shadow-lg">
@@ -159,13 +228,9 @@
             ${currentPlatform === "youtube"
               ? '<button id="audBtn" class="bg-green-600 hover:bg-green-700 transition px-4 py-2 rounded-xl shadow-md">🎧 Audio</button>'
               : ""}
-          </div>
-        `;
-
+          </div>`;
         document.getElementById("vidBtn").onclick = () => startDownload(url, "video");
-        if (currentPlatform === "youtube") {
-          document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
-        }
+        if (currentPlatform === "youtube") document.getElementById("audBtn").onclick = () => startDownload(url, "audio");
       } catch (err) {
         msg.innerHTML = `<span class="text-red-400">❌ ${err.message}</span>`;
       }
@@ -176,14 +241,11 @@
       formData.append("url", url);
       formData.append("platform", currentPlatform);
       formData.append("mode", mode);
-
       currentFileId = Date.now().toString();
       bar.style.width = "0%";
       pct.textContent = "0%";
       msg.innerHTML = "📥 Downloading...";
-
       pollProgress(currentFileId);
-
       try {
         const res = await fetch("/download", { method: "POST", body: formData });
         if (!res.ok) throw new Error("Download failed");
