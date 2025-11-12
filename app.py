@@ -78,12 +78,21 @@ def download():
 
     file_id = str(uuid.uuid4())[:8]
     output_template = os.path.join(DOWNLOAD_DIR, f"{file_id}_%(title)s.%(ext)s")
+    progress_file = os.path.join(DOWNLOAD_DIR, f"{file_id}_progress.json")
+
+    # function to update progress
+    def progress_hook(d):
+        if d["status"] == "downloading":
+            percent = d.get("_percent_str", "0%").strip()
+            with open(progress_file, "w") as f:
+                f.write(percent)
 
     ydl_opts = {
         "outtmpl": output_template,
         "quiet": True,
         "merge_output_format": "mp4",
         "ffmpeg_location": ffmpeg_path,
+        "progress_hooks": [progress_hook],
         "extractor_args": {"youtube": ["player_client=android"]},
         "no_warnings": True
     }
@@ -115,6 +124,10 @@ def download():
                 if os.path.exists(mp3_path):
                     file_path = mp3_path
 
+        # Cleanup progress file when done
+        if os.path.exists(progress_file):
+            os.remove(progress_file)
+
         print("✅ Sending file:", file_path)
         response = send_file(
             file_path,
@@ -136,7 +149,14 @@ def download():
     except Exception as e:
         print("Download error:", e)
         return f"❌ Error: {str(e)}", 500
-
+        
+@app.route("/progress/<file_id>")
+def progress(file_id):
+    progress_file = os.path.join(DOWNLOAD_DIR, f"{file_id}_progress.json")
+    if os.path.exists(progress_file):
+        with open(progress_file) as f:
+            return f.read()
+    return "0%"
 
 # ---------- RUN ----------
 if __name__ == "__main__":
