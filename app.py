@@ -65,7 +65,7 @@ def download():
         "outtmpl": output_template,
         "quiet": True,
         "merge_output_format": "mp4",
-        "ffmpeg_location": "/usr/bin",  # ✅ default FFmpeg path on Render
+        "ffmpeg_location": ffmpeg-path,
     }
 
     if mode == "audio":
