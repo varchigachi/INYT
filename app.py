@@ -84,6 +84,8 @@ def download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info)
+            ydl.process_info(info)  # ensures post-processing completes
+
             if mode == "audio":
                 base, _ = os.path.splitext(file_path)
                 mp3_path = base + ".mp3"
