@@ -86,17 +86,16 @@ def download():
                     f.write("100%")
         except Exception:
             pass
-    ydl_opts = {
-    'quiet': True,
-    'format': 'best',
-    'nocheckcertificate': True,
-    'user_agent': 'Mozilla/5.0',
-    'extractor_args': {
-        'youtube': {
-            'player_client': ['android']
-        }
-    }
+    import yt_dlp
+
+ydl_opts = {
+    "format": "best",
+    "quiet": True,
+    "cookiefile": "cookies.txt"
 }
+
+with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    info = ydl.extract_info(url, download=False)
 
     if os.path.exists("cookies.txt"):
         ydl_opts["cookiefile"] = "cookies.txt"
