@@ -97,16 +97,6 @@ def download():
         }
     }
 }
-    
-    ydl_opts = {
-        "outtmpl": output_template,
-        "quiet": True,
-        "merge_output_format": "mp4",
-        "ffmpeg_location": ffmpeg_path,
-        "progress_hooks": [progress_hook],
-        "extractor_args": {"youtube": ["player_client=android"]},
-        "no_warnings": True,
-    }
 
     if os.path.exists("cookies.txt"):
         ydl_opts["cookiefile"] = "cookies.txt"
