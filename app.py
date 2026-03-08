@@ -5,6 +5,8 @@ import uuid
 import imageio_ffmpeg
 import py_mini_racer  # Enables YouTube JS decryption
 
+os.environ["FLASK_SKIP_DOTENV"] = "1"
+
 app = Flask(__name__)
 
 # --- CONFIG ---
