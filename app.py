@@ -86,7 +86,18 @@ def download():
                     f.write("100%")
         except Exception:
             pass
-
+    ydl_opts = {
+    'quiet': True,
+    'format': 'best',
+    'nocheckcertificate': True,
+    'user_agent': 'Mozilla/5.0',
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android']
+        }
+    }
+}
+    
     ydl_opts = {
         "outtmpl": output_template,
         "quiet": True,
