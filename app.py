@@ -97,7 +97,7 @@ def download():
             }]
         })
     else:
-        ydl_opts["format"] = "bestvideo+bestaudio/best"
+        ydl_opts["format"] = "bestvideo+bestaudio/best/bestvideo/best"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
