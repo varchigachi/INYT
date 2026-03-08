@@ -80,7 +80,8 @@ def download():
         "quiet": True,
         "ffmpeg_location": ffmpeg_path,
         "extractor_args": {"youtube": {"player_client": ["android"]}},
-        "noplaylist": True
+        "noplaylist": True,
+        "format": "bv*+ba/b"
     }
 
     if os.path.exists("cookies.txt"):
@@ -97,7 +98,7 @@ def download():
             }]
         })
     else:
-        ydl_opts["format"] = "bestvideo+bestaudio/best/bestvideo/best"
+        ydl_opts["format"] = "bv*+ba/b"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
